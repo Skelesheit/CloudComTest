@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS  t1 (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    surname VARCHAR(700) NOT NULL,
+    patronymic VARCHAR(255) NOT NULL,
+    created TIMESTAMP DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS  t2 (
+    id BIGINT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    surname VARCHAR(700) NOT NULL,
+    patronymic VARCHAR(255) NOT NULL,
+    created TIMESTAMP,
+    load_time TIMESTAMP DEFAULT now()
+)

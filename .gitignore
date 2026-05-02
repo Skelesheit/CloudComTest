@@ -1,0 +1,14 @@
+/.env.docker
+data
+logs
+minio_data
+small_test
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/inspectionProfiles/Project_Default.xml
+/.idea/modules.xml
+/.idea/misc.xml
+/.idea/material_theme_project_new.xml
+/~$шение тестового от А до Я.docx
+/~WRL1218.tmp
+/.idea/CloudComTest.iml
+/.idea/vcs.xml
