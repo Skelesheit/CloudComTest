@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS  t1 (
     name VARCHAR(255) NOT NULL,
     surname VARCHAR(700) NOT NULL,
     patronymic VARCHAR(255) NOT NULL,
+    gender CHAR(1) NOT NULL,
     created TIMESTAMP DEFAULT now()
 );
 
@@ -11,6 +12,7 @@ CREATE TABLE IF NOT EXISTS  t2 (
     name VARCHAR(255) NOT NULL,
     surname VARCHAR(700) NOT NULL,
     patronymic VARCHAR(255) NOT NULL,
+    gender VARCHAR(1) NOT NULL,
     created TIMESTAMP,
     load_time TIMESTAMP DEFAULT now()
 )

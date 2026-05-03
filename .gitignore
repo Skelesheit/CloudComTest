@@ -1,5 +1,5 @@
 /.env.docker
-data
+dags/data
 logs
 minio_data
 small_test
@@ -12,3 +12,5 @@ small_test
 /~WRL1218.tmp
 /.idea/CloudComTest.iml
 /.idea/vcs.xml
+.venv
+.idea

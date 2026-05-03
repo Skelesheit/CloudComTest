@@ -14,10 +14,12 @@ x-airflow-common:
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__WEBSERVER__SECRET_KEY: "4b1f6d8e0a2c9f1133557799aabbccddeeff00112233445566778899aabbccdd"
+    AIRFLOW__CORE__FERNET_KEY: "D8gy8fsEHOa3kwPr0PhjDgb0lHUNR8Q84oxSU18xEAE="
+    AIRFLOW__API_AUTH__JWT_SECRET: 'JWT_AUTH_===222'
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
-    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8000/execution/'
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
     # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
@@ -104,7 +106,7 @@ services:
       timeout: 20s
       retries: 3
     volumes:
-      - ./minio_data:/data
+      - minio_volume:/data
     command: server --console-address ":9001" /data
 
   minio-init-bucket:
@@ -116,7 +118,7 @@ services:
       /usr/bin/mc alias set myminio http://minio:9000 admin password123;
       /usr/bin/mc mb myminio/default-bucket;
       exit 0;
-      "
+      " 
 
 
   airflow-init:
@@ -219,26 +221,9 @@ services:
     env_file:
       - .test.docker.env
     ports:
-      - "8000:8080"
+      - "8080:8080"
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8000/api/v2/version"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    restart: always
-    depends_on:
-      <<: *airflow-common-depends-on
-      airflow-init:
-        condition: service_completed_successfully
-
-  airflow-webserver:
-    <<: *airflow-common
-    command: webserver
-    ports:
-      - "9002:9002"
-    healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:8000/api/v2/version" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/version"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -283,6 +268,46 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  airflow-worker:
+    <<: *airflow-common
+    command: celery worker
+    healthcheck:
+      # yamllint disable rule:line-length
+      test:
+        - "CMD-SHELL"
+        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    environment:
+      <<: *airflow-common-env
+      # Required to handle warm shutdown of the celery workers properly
+      # See https://airflow.apache.org/docs/docker-stack/entrypoint.html#signal-propagation
+      DUMB_INIT_SETSID: "0"
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-apiserver:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+    healthcheck:
+      test: [ "CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"' ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
   airflow-cli:
     <<: *airflow-common
     env_file:
@@ -303,3 +328,4 @@ services:
 volumes:
   postgres-db-volume:
   pgadmin-data:
+  minio_volume:

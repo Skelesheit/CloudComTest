@@ -7,7 +7,7 @@ from db.models import T1
 from db.session import get_session
 
 # A Dag represents a workflow, a collection of tasks
-with DAG(dag_id="demo", start_date=datetime(2022, 1, 1), schedule="0 0 * * *") as dag:
+with DAG(dag_id="1", start_date=datetime(2022, 1, 1), schedule="0 0 * * *") as dag:
     # Tasks are represented as operators
     @task
     def insert_from_csv_to_t1(rows_count=100) -> None:
@@ -17,14 +17,17 @@ with DAG(dag_id="demo", start_date=datetime(2022, 1, 1), schedule="0 0 * * *") a
             for i, row in enumerate(reader):
                 if i >= rows_count:
                     break
-                name, surname, patronymic = row
+                name, surname, patronymic, gender = row
                 models_to_insert.append(
                     T1(
                         name=name,
                         surname=surname,
-                        patronymic=patronymic
+                        patronymic=patronymic,
+                        gender=gender,
                     )
                 )
         with get_session() as session:
             with session.begin():
                 session.bulk_save_objects(models_to_insert)
+
+    insert_from_csv_to_t1()
