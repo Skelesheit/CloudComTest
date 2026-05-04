@@ -12,6 +12,7 @@
 - **pgAdmin** — UI для работы с PostgreSQL
 - **SQLAlchemy** - ORM для базы данных 
 - **Docker / Docker Compose** - Развёртывание
+- **Celery worker** - Воркеры для работы DAG
 
 ## Данные
 
@@ -42,7 +43,8 @@ default-bucket/
 
 ### 1. Переменные окружения
 
-Все переменные уже готовы в `.docker.example.env` (проект с ними запустится)
+Все переменные уже готовы в `.docker.example.env` (проект с ними запустится).
+Переписывать переменные не обязательно.
 
 
 Основные переменные:
@@ -62,6 +64,7 @@ S3_BUCKET=default-bucket
 _AIRFLOW_WWW_USER_USERNAME=airflow
 _AIRFLOW_WWW_USER_PASSWORD=123
 ```
+При изменении конфигурации БД необходимо соответственно поменять `DB_URL`
 
 ### 2. Запуск
 
@@ -96,6 +99,10 @@ docker compose -f docker-airflow.yml run minio-init-bucket
 
 Поле `Extra` обязательно — без него Airflow будет пытаться обратиться к AWS вместо локального MinIO.
 
+### 5. Просмотр и тесты
+
+Просмотр данных доступно по следующим UI:
+
 ## Доступные UI
 
 | Сервис | Адрес | Логин / Пароль |
@@ -104,14 +111,6 @@ docker compose -f docker-airflow.yml run minio-init-bucket
 | pgAdmin | http://localhost:5050 | `admin@gmail.com` / `admin` |
 | MinIO Console | http://localhost:9001 | `admin` / `password123` |
 
-### Подключение PostgreSQL в pgAdmin
-
-```
-Host:     postgres
-Port:     5432
-Username: airflow
-Password: airflow
-```
 
 ### Регистрация сервера postgres
 
