@@ -8,7 +8,7 @@ from db.session import get_session
 
 # A Dag represents a workflow, a collection of tasks
 with DAG(
-        dag_id="3",
+        dag_id="2",
         start_date=datetime(2022, 1, 1),
         schedule="@daily"
 ) as dag:
