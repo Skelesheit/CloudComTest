@@ -1,3 +1,4 @@
+import os
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine
@@ -5,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 # чуть хардкода без .env
 engine = create_engine(
-    url="postgresql+psycopg2://airflow:airflow@postgres/airflow",
+    url=os.getenv("DB_URL"),
     pool_pre_ping=True,
     echo=False,
 )

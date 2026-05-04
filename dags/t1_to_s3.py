@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime, timedelta
 
 from airflow.exceptions import AirflowSkipException
@@ -15,7 +16,6 @@ with DAG(
         start_date=datetime(2026, 1, 1),
         schedule="@daily"
 ) as dag:
-
     @task
     def t1_to_s3() -> None:
         context = get_current_context()
@@ -26,7 +26,7 @@ with DAG(
         log = LoggingMixin().log
         log.info("START = %s", start)
         log.info("END = %s", end)
-        if start == end: # костыль при одном и том же времени
+        if start == end:  # костыль при одном и том же времени
             end = start + timedelta(days=1)
         with get_session() as session:
             with session.begin():
@@ -54,7 +54,7 @@ with DAG(
         s3_hook.load_string(
             json.dumps(t1_json, indent=4, ensure_ascii=False),
             key=key_path,
-            bucket_name="default-bucket",
+            bucket_name=os.getenv('S3_BUCKET'),
             replace=True,
         )
 

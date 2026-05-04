@@ -6,29 +6,9 @@ x-airflow-common:
   image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:3.1.2}
   # build: .
   env_file:
-    - ${ENV_FILE_PATH:-.test.docker.env}
+    - .docker.example.env
   environment:
     &airflow-common-env
-    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-    AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-    AIRFLOW__WEBSERVER__SECRET_KEY: "4b1f6d8e0a2c9f1133557799aabbccddeeff00112233445566778899aabbccdd"
-    AIRFLOW__CORE__FERNET_KEY: "D8gy8fsEHOa3kwPr0PhjDgb0lHUNR8Q84oxSU18xEAE="
-    AIRFLOW__API_AUTH__JWT_SECRET: 'JWT_AUTH_===222'
-    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
-    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
-    # yamllint disable rule:line-length
-    # Use simple http server on scheduler for health checks
-    # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
-    # yamllint enable rule:line-length
-    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
-    # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
-    # for other purpose (development, test and especially production usage) build/extend Airflow image.
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
-    # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
@@ -46,12 +26,8 @@ x-airflow-common:
 services:
   postgres:
     env_file:
-      - .test.docker.env
+      - .docker.example.env
     image: postgres:16
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
       - ./postgres_init:/docker-entrypoint-initdb.d
@@ -60,27 +36,23 @@ services:
       interval: 10s
       retries: 5
       start_period: 5s
-    restart: always
+    restart: unless-stopped
 
   pgadmin:
     image: dpage/pgadmin4:8
-    env_file: .env.docker
+    env_file: .docker.example.env
     ports:
-      - "5050:80"               # откроется на http://localhost:5050
+      - "5050:80"
     depends_on:
       - postgres
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+    restart: unless-stopped
     volumes:
       - pgadmin-data:/var/lib/pgadmin
 
   redis:
-    # Redis is limited to 7.2-bookworm due to licencing change
-    # https://redis.io/blog/redis-adopts-dual-source-available-licensing/
     image: redis:7.2-bookworm
     env_file:
-      - .test.docker.env
+      - .docker.example.env
     expose:
       - 6379
     healthcheck:
@@ -89,17 +61,17 @@ services:
       timeout: 30s
       retries: 50
       start_period: 30s
-    restart: always
+    restart: unless-stopped
 
   minio:
     image: quay.io/minio/minio:latest
     container_name: minio
+    env_file:
+      - .docker.example.env
+    restart: unless-stopped
     ports:
       - "9000:9000"    # S3 API Port
       - "9001:9001"    # MinIO Console Port
-    environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: password123
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 30s
@@ -111,20 +83,21 @@ services:
 
   minio-init-bucket:
     image: minio/mc:latest
+    env_file:
+      - .docker.example.env
     depends_on:
       - minio
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc alias set myminio http://minio:9000 admin password123;
-      /usr/bin/mc mb myminio/default-bucket;
+      /usr/bin/mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
+      /usr/bin/mc mb myminio/$${S3_BUCKET};
       exit 0;
-      " 
-
+      "  
 
   airflow-init:
     <<: *airflow-common
     env_file:
-      - .test.docker.env
+      - .docker.example.env
     entrypoint: /bin/bash
     # yamllint disable rule:line-length
     command:
@@ -218,8 +191,6 @@ services:
   airflow-apiserver:
     <<: *airflow-common
     command: api-server
-    env_file:
-      - .test.docker.env
     ports:
       - "8080:8080"
     healthcheck:
@@ -228,7 +199,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    restart: always
+    restart: unless-stopped
     depends_on:
       <<: *airflow-common-depends-on
       airflow-init:
@@ -237,15 +208,13 @@ services:
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
-    env_file:
-      - .test.docker.env
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
-    restart: always
+    restart: unless-stopped
     depends_on:
       <<: *airflow-common-depends-on
       airflow-init:
@@ -254,15 +223,13 @@ services:
   airflow-dag-processor:
     <<: *airflow-common
     command: dag-processor
-    env_file:
-      - .test.docker.env
     healthcheck:
       test: ["CMD-SHELL", 'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"']
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
-    restart: always
+    restart: unless-stopped
     depends_on:
       <<: *airflow-common-depends-on
       airflow-init:
@@ -285,7 +252,7 @@ services:
       # Required to handle warm shutdown of the celery workers properly
       # See https://airflow.apache.org/docs/docker-stack/entrypoint.html#signal-propagation
       DUMB_INIT_SETSID: "0"
-    restart: always
+    restart: unless-stopped
     depends_on:
       <<: *airflow-common-depends-on
       airflow-apiserver:
@@ -310,8 +277,6 @@ services:
 
   airflow-cli:
     <<: *airflow-common
-    env_file:
-      - .test.docker.env
     profiles:
       - debug
     environment:
