@@ -123,7 +123,7 @@ docker compose -f docker-airflow.yml run minio-init-bucket
 | Username  | Connection | airflow |
 | Password  | Connection | airflow |
 
-Остальные поля трогать не обязательно.
+Остальные поля изменять не обязательно.
 
 После подключения в схеме `public` будут доступны таблицы `t1` и `t2`.
 
@@ -131,9 +131,9 @@ docker compose -f docker-airflow.yml run minio-init-bucket
 
 ## Проверка работы
 
-**DAG 1 — csv_to_t1**: запусти вручную, проверь через pgAdmin что `t1` заполнена.
+**DAG 1 — csv_to_t1**: запустить вручную через UI, проверить через pgAdmin, что `t1` заполнена.
 
-**DAG 2 — t1_to_t2**: запусти вручную, проверь что `t2` содержит те же данные что `t1`.
+**DAG 2 — t1_to_t2**: запустить вручную, проверить, что `t2` содержит те же данные что `t1`.
 
-**DAG 3 — t1_to_s3**: запусти вручную, в MinIO Console убедись что в бакете `default-bucket` появилась директория с датой и файлом `data.json` внутри.
+**DAG 3 — t1_to_s3**: запустить вручную, в MinIO Console убедиться, что в бакете `default-bucket` появилась директория с датой и файлом `data.json` внутри.
 
