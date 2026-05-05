@@ -25,7 +25,7 @@ Airflow DAGs
 Airflow выступает оркестратором: управляет загрузкой, трансформацией и выгрузкой данных. Redis используется как брокер задач для CeleryExecutor.
 
 <br>
-Внимание ! Необходимо поместить `data.csv` в `dags/data/data.csv`, был взят датасет с <https://www.kaggle.com/datasets/rai220/russian-cyrillic-names-and-sex>
+Внимание ! Необходимо поместить `data.csv` в `dags/data/data.csv`, был взят датасет с https://www.kaggle.com/datasets/rai220/russian-cyrillic-names-and-sex
 
 ## DAG'и
 
